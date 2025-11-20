@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<title>Urath X by Shafiullah</title>
+<!-- Manifest for Android/Chrome -->
+<link rel="manifest" href="manifest.json">
+
+<!-- iOS / Safari Home Screen -->
+<link rel="apple-touch-icon" href="icon.png">
+
+<!-- Favicon fallback -->
+<link rel="icon" href="icon.png">
+
+<!-- Theme colors -->
+<meta name="theme-color" content="#020202">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Urath X">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<style>
+  /* 1. FIXED: Global Box Sizing */
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root{
+    --bg: #f0f2f5; 
+    --card: rgba(255, 255, 255, 0.85);
+    --text: #1d1d1f;
+    --muted: #86868b;
+    /* RESTORED: Natural Blue Accent */
+    --accent: #0071e3; 
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --shadow: 0 8px 30px rgba(0,0,0,0.12);
+    --bar-bg: rgba(255, 255, 255, 0.65);
+    --bar-text: #000;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root{
+      /* RESTORED: Standard Space Black/Dark Grey */
+      --bg: #000000; 
+      --card: rgba(30, 30, 30, 0.85);
+      --text: #f5f5f7;
+      --muted: #a1a1a6;
+      --accent: #2997ff;
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --shadow: 0 8px 30px rgba(0,0,0,0.5);
+      --bar-bg: rgba(20, 20, 25, 0.65);
+      --bar-text: #fff;
+    }
+  }
+
+  html,body{
+    height:100%; margin:0; font-family:'SF Pro Display', 'Inter', sans-serif; 
+    color:var(--text); background:var(--bg); overflow:hidden;
+    transition: background 0.5s ease;
+  }
+
+  /* ----------------------
+     Globe Container
+  ---------------------- */
+  .globe-container{
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1;
+    /* RESTORED: Natural white fog */
+    background: radial-gradient(circle at center, #ffffff 0%, #e6e9f0 100%);
+    transition: background 0.5s;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    /* RESTORED: Deep Space */
+    .globe-container { background: #020203; } 
+  }
+
+  #globeCanvas{ width: 100%; height: 100%; display: block; outline: none; }
+
+  /* ----------------------
+     UI Header
+  ---------------------- */
+  .ui-header {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    width: 90%; max-width: 600px;
+    z-index: 1000;
+    display: flex; gap: 12px; align-items: center;
+  }
+
+  .floating-search-bar{
+    flex: 1; height: 50px;
+    background: var(--bar-bg);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 25px;
+    box-shadow: var(--shadow);
+    display: flex; gap: 10px; align-items: center; padding: 0 6px 0 20px;
+    transition: all 0.3s ease;
+  }
+  
+  .floating-search-bar input{
+    flex: 1; border: none; background: transparent;
+    font-size: 16px; color: var(--bar-text); outline: none;
+  }
+
+  .search-icon-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: transparent; border: none; color: var(--bar-text); 
+    opacity: 0.6; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .search-icon-btn:hover { transform: scale(1.1); opacity: 1; color: var(--accent); }
+
+  /* ----------------------
+     Explore Panel
+  ---------------------- */
+  #explorePanel{
+    position: fixed; bottom: 0; left: 0; right: 0;
+    max-height: 80vh; 
+    background: var(--card);
+    backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+    border-top: 1px solid var(--glass-border);
+    border-radius: 24px 24px 0 0;
+    box-shadow: var(--shadow);
+    z-index: 900;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex; flex-direction: column;
+  }
+
+  #explorePanel.active { transform: translateY(0); }
+
+  .panel-handle {
+    width: 40px; height: 5px; background: var(--muted); opacity: 0.3;
+    border-radius: 10px; margin: 12px auto;
+  }
+
+  .panel-content { overflow-y: auto; padding: 0 20px 30px 20px; }
+
+  @media (min-width: 768px) {
+    #explorePanel{
+      bottom: auto; top: 100px; right: 30px; left: auto;
+      width: 400px; max-height: calc(100vh - 130px);
+      border-radius: 20px; border: 1px solid var(--glass-border);
+      transform: translateX(120%);
+    }
+    #explorePanel.active { transform: translateX(0); }
+    .panel-handle { display: none; }
+    .panel-content { padding: 25px; }
+  }
+
+  .country-item {
+    display: flex; align-items: center; gap: 15px; padding: 12px;
+    border-radius: 12px; transition: background 0.2s; cursor: pointer;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+  }
+  .country-item:hover { background: rgba(128, 128, 128, 0.1); }
+  .country-item img { width: 50px; height: 34px; border-radius: 6px; object-fit: cover; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+  
+  .details-card { 
+    background: rgba(128,128,128, 0.05); padding: 20px; 
+    border-radius: 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .detail-row { 
+    display: flex; justify-content: space-between; padding: 10px 0; 
+    font-size: 0.9rem; border-bottom: 1px solid rgba(128,128,128,0.1); 
+    line-height: 1.4;
+  }
+  .detail-row span:first-child { color: var(--muted); flex-shrink: 0; margin-right: 10px; }
+  .detail-row span:last-child { text-align: right; font-weight: 500; }
+  
+  .detail-flag-large { width: 100%; height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+  
+  .coa-img { height: 40px; width: auto; max-width: 60px; object-fit: contain; }
+
+  .btn-map {
+    display: block; width: 100%; padding: 12px; margin-top: 10px;
+    background: var(--accent); color: white; text-align: center;
+    border-radius: 12px; text-decoration: none; font-weight: 600;
+    transition: transform 0.2s;
+  }
+  .btn-map:hover { transform: scale(1.02); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="globe-container">
+    <canvas id="globeCanvas"></canvas>
+  </div>
+
+  <div class="ui-header">
+    <div class="floating-search-bar">
+      <input type="text" id="countrySearch" placeholder="Search country..." autocomplete="off" />
+      <button id="searchBtn" class="search-icon-btn">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="explorePanel">
+    <div class="panel-handle"></div>
+    <div class="panel-content">
+      <h2 id="panelTitle" style="margin:10px 0 20px;">Search Results</h2>
+      <div class="details-card" id="countryDetailsCard" style="display:none;"></div>
+      <div id="resultsContainer"><div class="country-list" id="countryList"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------------------------
+  1. CONFIG & STATE
+----------------------------------- */
+const API_FIELDS = 'name,capital,region,subregion,population,area,flags,currencies,cca2,cca3,ccn3,cioc,timezones,latlng,maps,borders,languages,coatOfArms,altSpellings,tld,independent,status,unMember,car,demonyms,gini,fifa,startOfWeek,continents';
+const API_BASE = 'https://restcountries.com/v3.1';
+const TEXTURES = {
+    day: 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
+    night: 'https://unpkg.com/three-globe/example/img/earth-night.jpg',
+    clouds: 'https://unpkg.com/three-globe/example/img/earth-clouds.png',
+    bump: 'https://unpkg.com/three-globe/example/img/earth-topology.png'
+};
+let countries = []; 
+let debounceTimer = null; 
+
+/* ---------------------------------
+  2. THREE.JS GLOBE ENGINE
+----------------------------------- */
+let scene, camera, renderer, controls;
+let earthMesh, cloudMesh, starField, sunLight, ambientLight;
+
+// --- ANIMATION TARGETS FOR FLY-TO ---
+let targetPosition = null;
+let isFlying = false;
+
+function initGlobe() {
+    const container = document.querySelector('.globe-container');
+    const canvas = document.getElementById('globeCanvas');
+
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+
+    scene = new THREE.Scene();
+    
+    // RESTORED: Natural white fog (Theme logic will adjust this later)
+    scene.fog = new THREE.FogExp2(0xffffff, 0.02);
+
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    const dist = window.innerWidth < 768 ? 5.5 : 4.2;
+    camera.position.set(0, 0, dist);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enablePan = false;
+    controls.minDistance = 2.5;
+    controls.maxDistance = 10;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.8;
+
+    // --- EARTH (NATURAL) ---
+    const earthGeo = new THREE.SphereGeometry(1.5, 64, 64);
+    const earthMat = new THREE.MeshPhongMaterial({ 
+        shininess: 15, 
+        bumpScale: 0.02, 
+        emissive: 0x000000,
+        color: 0xffffff // RESTORED: White (Allows texture colors to show)
+    });
+    earthMesh = new THREE.Mesh(earthGeo, earthMat);
+    earthMesh.rotation.z = 23.5 * Math.PI / 180;
+    scene.add(earthMesh);
+
+    // --- CLOUDS (NATURAL) ---
+    const cloudGeo = new THREE.SphereGeometry(1.51, 64, 64);
+    const cloudMat = new THREE.MeshPhongMaterial({
+        map: new THREE.TextureLoader().load(TEXTURES.clouds),
+        transparent: true, 
+        opacity: 0.8,             // RESTORED: Standard opacity
+        blending: THREE.AdditiveBlending, // RESTORED: Airy looking clouds
+        side: THREE.DoubleSide,
+        color: 0xffffff           // RESTORED: White clouds
+    });
+    cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
+    scene.add(cloudMesh);
+
+    // Stars
+    const starGeo = new THREE.BufferGeometry();
+    const starCount = 5000;
+    const posArray = new Float32Array(starCount * 3);
+    const colorArray = new Float32Array(starCount * 3);
+
+    for(let i=0; i<starCount*3; i+=3) {
+        posArray[i] = (Math.random() - 0.5) * 100;
+        posArray[i+1] = (Math.random() - 0.5) * 100;
+        posArray[i+2] = (Math.random() - 0.5) * 100;
+
+        const colorType = Math.random();
+        let color = new THREE.Color();
+        // RESTORED: Natural Star Colors
+        if(colorType > 0.9) color.setHex(0xffddaa); // Warm
+        else if (colorType > 0.7) color.setHex(0xaaccff); // Cool
+        else color.setHex(0xffffff); // White
+
+        colorArray[i] = color.r;
+        colorArray[i+1] = color.g;
+        colorArray[i+2] = color.b;
+    }
+
+    starGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    starGeo.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+
+    const starMat = new THREE.PointsMaterial({
+        size: 0.12, vertexColors: true, transparent: true, opacity: 0
+    });
+    starField = new THREE.Points(starGeo, starMat);
+    scene.add(starField);
+
+    // Lights
+    ambientLight = new THREE.AmbientLight(0xffffff, 1);
+    scene.add(ambientLight);
+    sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    sunLight.position.set(10, 10, 10);
+    scene.add(sunLight);
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    backLight.position.set(-10, 5, -10);
+    scene.add(backLight);
+
+    // Load Textures
+    const loader = new THREE.TextureLoader();
+    loader.load(TEXTURES.day, (tex) => { earthMesh.material.map = tex; earthMesh.material.needsUpdate = true; });
+    loader.load(TEXTURES.bump, (tex) => { earthMesh.material.bumpMap = tex; earthMesh.material.needsUpdate = true; });
+
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        
+        // Slight rotation for clouds to feel alive
+        if(cloudMesh) cloudMesh.rotation.y += 0.0003;
+
+        // --- FLY-TO ANIMATION LOGIC ---
+        if(isFlying && targetPosition) {
+            // Simple linear interpolation (Lerp)
+            camera.position.lerp(targetPosition, 0.05);
+            
+            // Stop flying when close enough
+            if(camera.position.distanceTo(targetPosition) < 0.05) {
+                isFlying = false;
+                controls.autoRotate = false; // Keep it still
+            }
+        }
+
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+}
+
+/* ---------------------------------
+  3. SYSTEM THEME LOGIC (UPDATED FOR NATURAL)
+----------------------------------- */
+function setTheme(mode) {
+    const loader = new THREE.TextureLoader();
+    if (mode === 'dark') {
+        loader.load(TEXTURES.night, (tex) => {
+            earthMesh.material.map = tex;
+            earthMesh.material.emissiveMap = tex;
+            // RESTORED: Golden City Lights
+            earthMesh.material.emissive = new THREE.Color(0xffcc88); 
+            earthMesh.material.emissiveIntensity = 1.5;
+            // RESTORED: Natural Dark Base
+            earthMesh.material.color.setHex(0x222222); 
+            earthMesh.material.shininess = 30; 
+            earthMesh.material.needsUpdate = true;
+        });
+        ambientLight.intensity = 0.1; 
+        sunLight.intensity = 0.5; 
+        starField.material.opacity = 0.9; 
+        if(scene.fog) scene.fog.color.setHex(0x020203); // Black/Dark Fog
+    } else {
+        loader.load(TEXTURES.day, (tex) => {
+            earthMesh.material.map = tex;
+            earthMesh.material.emissive.setHex(0x000000);
+            earthMesh.material.emissiveMap = null;
+            earthMesh.material.emissiveIntensity = 0;
+            // RESTORED: White (No tint)
+            earthMesh.material.color.setHex(0xffffff); 
+            earthMesh.material.shininess = 10;
+            earthMesh.material.needsUpdate = true;
+        });
+        ambientLight.intensity = 1.0;
+        sunLight.intensity = 1.5;
+        starField.material.opacity = 0;
+        if(scene.fog) scene.fog.color.setHex(0xffffff); // White Fog
+    }
+}
+
+const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+function applySystemTheme() { setTheme(systemTheme.matches ? 'dark' : 'light'); }
+systemTheme.addEventListener('change', applySystemTheme);
+
+/* ---------------------------------
+  4. DATA & LOGIC
+----------------------------------- */
+const panel = document.getElementById('explorePanel');
+const searchInput = document.getElementById('countrySearch');
+
+function showPanel(title, listOnly = true) {
+    document.getElementById('panelTitle').innerText = title;
+    panel.classList.add('active');
+    document.getElementById('countryDetailsCard').style.display = listOnly ? 'none' : 'flex';
+    document.getElementById('resultsContainer').style.display = listOnly ? 'block' : 'none';
+    // Only auto-rotate if we are showing a list, otherwise stop for the selected country
+    controls.autoRotate = listOnly; 
+}
+
+function hidePanel() { 
+    panel.classList.remove('active');
+    controls.autoRotate = true; 
+    isFlying = false; 
+}
+
+document.querySelector('.panel-handle').addEventListener('click', hidePanel);
+document.addEventListener('click', (e) => {
+    if(window.innerWidth >= 768 && !panel.contains(e.target) && !document.querySelector('.ui-header').contains(e.target)){
+        hidePanel();
+    }
+});
+
+// --- FLY TO LOCATION FUNCTION ---
+function flyToLocation(lat, lng) {
+    controls.autoRotate = false;
+    isFlying = true;
+
+    // Math to convert Lat/Lng to 3D Position
+    // We use a radius slightly larger than earth (1.5) + distance we want to hover at
+    const phi = (90 - lat) * (Math.PI / 180);
+    const theta = (lng + 180) * (Math.PI / 180);
+    const r = 5.0; // Camera distance
+
+    // Calculate Cartesian Coordinates (in Three.js, Y is Up)
+    const x = -(r * Math.sin(phi) * Math.cos(theta));
+    const z = r * Math.sin(phi) * Math.sin(theta);
+    const y = r * Math.cos(phi);
+
+    targetPosition = new THREE.Vector3(x, y, z);
+}
+
+async function loadCountries(){
+    try{
+        const res = await fetch(`${API_BASE}/all?fields=${API_FIELDS}`);
+        if(res.ok) {
+            const data = await res.json();
+            countries = data.filter(c=>c.name.common).sort((a,b)=>a.name.common.localeCompare(b.name.common));
+            renderResults(countries.slice(0, 10), 'Suggested for you');
+        }
+    }catch(e){ console.error(e); }
+}
+
+function renderResults(list, title){
+    const wrap = document.getElementById('countryList');
+    wrap.innerHTML = '';
+    document.getElementById('panelTitle').innerText = title;
+    if(!list || list.length === 0) { 
+        wrap.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px;">No results found locally.<br><small>Try waiting or check spelling.</small></p>'; 
+        return; 
+    }
+    list.slice(0,50).forEach(c => {
+        const d = document.createElement('div');
+        d.className = 'country-item';
+        d.innerHTML = `
+            <img src="${c.flags.png}" alt="flag">
+            <div>
+                <div style="font-weight:600">${c.name.common}</div>
+                <div style="font-size:0.85rem;color:var(--muted)">${c.region}</div>
+            </div>`;
+        d.onclick = () => showCountryDetails(c);
+        wrap.appendChild(d);
+    });
+}
+
+function getNeighborNames(borders) {
+    if (!borders || borders.length === 0) return "None";
+    if (countries.length === 0) return borders.join(', ');
+    return borders.map(code => {
+        const country = countries.find(c => c.cca3 === code);
+        return country ? country.name.common : code;
+    }).join(', ');
+}
+
+function getWeatherDesc(code) {
+    const codes = {
+        0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+        45: 'Fog', 48: 'Depositing rime fog',
+        51: 'Light drizzle', 53: 'Moderate drizzle', 55: 'Dense drizzle',
+        61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',
+        80: 'Slight showers', 81: 'Moderate showers', 82: 'Violent showers',
+        95: 'Thunderstorm'
+    };
+    return codes[code] || 'Variable';
+}
+
+async function fetchRealTimeData(lat, lng) {
+    const timeSpan = document.getElementById('dyn-time');
+    const weatherSpan = document.getElementById('dyn-weather');
+    
+    if(!lat || !lng) {
+        timeSpan.innerText = "Unavailable";
+        weatherSpan.innerText = "Unavailable";
+        return;
+    }
+    
+    try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&timezone=auto`);
+        if(res.ok){
+            const data = await res.json();
+            if(data.timezone) {
+                 const actualTime = new Date().toLocaleTimeString([], {
+                    timeZone: data.timezone,
+                    hour: '2-digit',
+                    minute: '2-digit'
+                 });
+                 timeSpan.innerText = actualTime;
+            } else {
+                 timeSpan.innerText = new Date(data.current_weather.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+
+            const temp = data.current_weather.temperature;
+            const desc = getWeatherDesc(data.current_weather.weathercode);
+            weatherSpan.innerText = `${temp}°C, ${desc}`;
+        } else { throw new Error("Weather API Error"); }
+    } catch(e) {
+        timeSpan.innerText = "N/A";
+        weatherSpan.innerText = "N/A";
+    }
+}
+
+/**
+ * FIXED: Fetches the latest GDP data (NY.GDP.MKTP.CD) from the World Bank API.
+ * Uses a more robust URL and checks for correct data structure.
+ * @param {string} countryCode The 2-letter ISO code (cca2) for the country.
+ */
+async function fetchGDPData(countryCode) {
+    const gdpSpan = document.getElementById('dyn-gdp');
+    if (!countryCode) {
+        gdpSpan.innerText = "N/A (Code Missing)";
+        return;
+    }
+    gdpSpan.innerText = "Loading...";
+
+    // World Bank API endpoint for GDP (current US$), requesting the Most Recent Value (mrv=1)
+    const url = `https://api.worldbank.org/v2/country/${countryCode}/indicator/NY.GDP.MKTP.CD?format=json&mrv=1`;
+
+    try {
+        const res = await fetch(url);
+        
+        // 1. Check HTTP Status
+        if (!res.ok) {
+            // If the server responded with an error status (e.g., 400, 500)
+            gdpSpan.innerText = `N/A (Server error: ${res.status})`;
+            return;
+        }
+        
+        const data = await res.json();
+
+        // 2. Check Data Structure and Content
+        // World Bank API returns a 2-element array: [metadata, data_array]
+        if (!Array.isArray(data) || data.length < 2 || !Array.isArray(data[1]) || data[1].length === 0 || data[1][0]?.value === null) {
+            gdpSpan.innerText = "N/A (Data not found)";
+            return;
+        }
+
+        const latestData = data[1][0];
+        const gdpValue = latestData.value;
+        const gdpYear = latestData.date;
+
+        // Format the GDP value (e.g., 20,000,000,000 -> 20 Billion)
+        let formattedGDP;
+        let suffix = '';
+        const absGDP = Math.abs(gdpValue);
+
+        if (absGDP >= 1e12) {
+            formattedGDP = (gdpValue / 1e12).toFixed(2);
+            suffix = ' Trillion';
+        } else if (absGDP >= 1e9) {
+            formattedGDP = (gdpValue / 1e9).toFixed(2);
+            suffix = ' Billion';
+        } else if (absGDP >= 1e6) {
+            formattedGDP = (gdpValue / 1e6).toFixed(2);
+            suffix = ' Million';
+        } else {
+            formattedGDP = gdpValue.toLocaleString();
+        }
+
+        gdpSpan.innerText = `US$ ${formattedGDP}${suffix} (${gdpYear})`;
+
+    } catch (e) {
+        console.error("GDP Fetch Error:", e);
+        // Final fallback error if fetch or json parsing failed
+        gdpSpan.innerText = "N/A (API Error)"; 
+    }
+}
+
+
+function showCountryDetails(c){
+    const card = document.getElementById('countryDetailsCard');
+    
+    // Existing Calculations
+    const population = c.population ? c.population.toLocaleString() : 'N/A';
+    const area = c.area ? c.area.toLocaleString() + ' km²' : 'N/A';
+    const currencies = c.currencies ? Object.values(c.currencies).map(x => `${x.name} (${x.symbol || '?'})`).join(', ') : 'N/A';
+    const languages = c.languages ? Object.values(c.languages).join(', ') : 'N/A';
+    const neighbors = getNeighborNames(c.borders);
+    const coaUrl = c.coatOfArms?.svg || c.coatOfArms?.png || '';
+    
+    // NEW CALCULATIONS FOR EXTENDED DATA
+    const nativeName = Object.values(c.name.nativeName || {})[0]?.common || 'N/A';
+    const statusText = `${c.independent ? 'Independent' : 'Dependent'} (${c.status})`;
+    const isoCodes = `${c.cca2}, ${c.cca3}, ${c.ccn3 || 'N/A'} (CIOC: ${c.cioc || 'N/A'})`;
+    const tld = (c.tld||[]).join(', ') || 'N/A';
+    const drivingSide = c.car?.side ? c.car.side.charAt(0).toUpperCase() + c.car.side.slice(1) : 'N/A';
+    const carSign = (c.car?.signs||[]).join(', ') || 'N/A';
+    const demonyms = `${c.demonyms?.eng?.m || 'N/A'} / ${c.demonyms?.eng?.f || 'N/A'}`;
+    const gini = Object.values(c.gini || {})[0] ? `${Object.values(c.gini)[0]} (${Object.keys(c.gini)[0]})` : 'N/A';
+    const unMember = c.unMember ? 'Yes' : 'No';
+    const startOfWeek = c.startOfWeek ? c.startOfWeek.charAt(0).toUpperCase() + c.startOfWeek.slice(1) : 'N/A';
+    const fifa = c.fifa || 'N/A';
+    const continents = (c.continents||[]).join(', ') || 'N/A';
+    
+    card.innerHTML = `
+        <h2 style="margin:0">${c.name.common} <small style="color:var(--muted)">${c.cca3}</small></h2>
+        <img src="${c.flags.png}" class="detail-flag-large" alt="Flag of ${c.name.common}">
+        
+        <div class="detail-row"><span>Coat of Arms</span> <span>${coaUrl ? `<img src="${coaUrl}" class="coa-img">` : 'N/A'}</span></div>
+        <div class="detail-row"><span>Official Name</span> <span>${c.name.official}</span></div>
+        <div class="detail-row"><span>Native Name</span> <span>${nativeName}</span></div>
+        <div class="detail-row"><span>Capital</span> <span>${c.capital?.[0]||'N/A'}</span></div>
+        
+        <div class="detail-row"><span>Region / Continent</span> <span>${c.region} / ${continents}</span></div>
+        <div class="detail-row"><span>Subregion</span> <span>${c.subregion || 'N/A'}</span></div>
+        
+        <div class="detail-row"><span>Population</span> <span>${population}</span></div>
+        <div class="detail-row"><span>Area</span> <span>${area}</span></div>
+        <div class="detail-row"><span>GDP (Current US$)</span> <span id="dyn-gdp" style="color:var(--accent)">Loading...</span></div>
+        
+        <div class="detail-row"><span>Languages</span> <span>${languages}</span></div>
+        <div class="detail-row"><span>Currency</span> <span>${currencies}</span></div>
+        <div class="detail-row"><span>TLD</span> <span>${tld}</span></div>
+        
+        <div class="detail-row"><span>ISO Codes (2/3/Num)</span> <span>${isoCodes}</span></div>
+        <div class="detail-row"><span>UN Member</span> <span>${unMember}</span></div>
+        <div class="detail-row"><span>Status</span> <span>${statusText}</span></div>
+        <div class="detail-row"><span>Demonyms (M/F)</span> <span>${demonyms}</span></div>
+        <div class="detail-row"><span>FIFA Code</span> <span>${fifa}</span></div>
+        <div class="detail-row"><span>Gini Index</span> <span>${gini}</span></div>
+        <div class="detail-row"><span>Driving Side</span> <span>${drivingSide} (Sign: ${carSign})</span></div>
+        <div class="detail-row"><span>Week Start</span> <span>${startOfWeek}</span></div>
+        
+        <div class="detail-row"><span>Neighbours</span> <span>${neighbors}</span></div>
+        <div class="detail-row"><span>Timezones</span> <span>${(c.timezones||[]).slice(0,3).join(', ')}${c.timezones?.length>3?'...':''}</span></div>
+        
+        <div class="detail-row"><span>Local Time</span> <span id="dyn-time" style="color:var(--accent)">Loading...</span></div>
+        <div class="detail-row"><span>Weather</span> <span id="dyn-weather" style="color:var(--accent)">Loading...</span></div>
+
+        <a href="${c.maps.googleMaps}" target="_blank" rel="noopener noreferrer" class="btn-map">Open in Google Maps</a>
+    `;
+    
+    if(c.latlng) {
+        fetchRealTimeData(c.latlng[0], c.latlng[1]);
+        flyToLocation(c.latlng[0], c.latlng[1]); // <--- Trigger Camera Move
+    }
+    // NEW: Fetch and display GDP
+    fetchGDPData(c.cca2); 
+
+    showPanel(c.name.common, false);
+}
+
+/* ---------------------------------
+  5. SEARCH LOGIC
+----------------------------------- */
+document.getElementById('searchBtn').addEventListener('click', () => handleSearch(false));
+searchInput.addEventListener('keydown', (e) => { if(e.key==='Enter') handleSearch(false); });
+searchInput.addEventListener('input', () => handleSearch(true));
+
+async function fetchFromAPI(q) {
+    try {
+        document.getElementById('panelTitle').innerText = "Searching remote database...";
+        const res = await fetch(`${API_BASE}/name/${encodeURIComponent(q)}`);
+        if (res.ok) {
+            const data = await res.json();
+            showPanel(`Results for "${q}"`, true);
+            renderResults(data, `Results for "${q}"`);
+            if(data.length === 1) showCountryDetails(data[0]);
+        } else {
+            renderResults([], `No results for "${q}"`); 
+        }
+    } catch (err) { renderResults([], `Network Error`); }
+}
+
+async function handleSearch(isTyping = false){
+    const q = searchInput.value.trim().toLowerCase();
+    if(debounceTimer) clearTimeout(debounceTimer);
+
+    if(!q) { 
+        showPanel('Suggested for you', true); 
+        renderResults(countries.slice(0,10), 'Suggested for you'); 
+        return; 
+    }
+
+    let filtered = [];
+    if (countries.length > 0) {
+        filtered = countries.filter(c => {
+            const common = c.name.common.toLowerCase();
+            const official = c.name.official.toLowerCase();
+            const code = c.cca3 ? c.cca3.toLowerCase() : '';
+            const alt = c.altSpellings ? c.altSpellings.map(s => s.toLowerCase()) : [];
+            return common.includes(q) || official.includes(q) || code.includes(q) || alt.some(s => s.includes(q));
+        });
+    }
+
+    if (filtered.length > 0) {
+        if(!isTyping && filtered.length === 1) {
+             showCountryDetails(filtered[0]);
+        } else {
+             showPanel(`Results for "${q}"`, true); 
+             renderResults(filtered, `Results for "${q}"`);
+        }
+        return;
+    }
+
+    if(isTyping) {
+         renderResults([], "Searching..."); 
+         debounceTimer = setTimeout(() => { fetchFromAPI(q); }, 500); 
+         return;
+    }
+
+    showPanel('Searching...', true);
+    fetchFromAPI(q);
+}
+
+window.onload = () => {
+    initGlobe();
+    loadCountries();
+    applySystemTheme();
+};
+</script>
+</body>
+</html>
