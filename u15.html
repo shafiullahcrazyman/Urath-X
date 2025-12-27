@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<title>Urath X by Shafiullah</title>
+<!-- Manifest for Android/Chrome -->
+<link rel="manifest" href="manifest.json">
+
+<!-- iOS / Safari Home Screen -->
+<link rel="apple-touch-icon" href="icon.png">
+
+<!-- Favicon fallback -->
+<link rel="icon" href="icon.png">
+
+<!-- Theme colors -->
+<meta name="theme-color" content="#a6a6a6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Urath X">
+
+<style>
+  /* 1. FIXED: Global Box Sizing */
+  *, *::before, *::after { box-sizing: border-box; }
+
+  /* ----------------------
+     THEME VARIABLES (M3 Setup)
+  ---------------------- */
+  :root {
+    /* Light Mode (Default) */
+    --bg: #f0f2f5; 
+    --card: rgba(255, 255, 255, 0.9);
+    --text: #1d1d1f;
+    --muted: #48484a;
+    --accent: #0071e3; 
+    --glass-border: rgba(255, 255, 255, 0.6);
+    --shadow: 0 4px 20px rgba(0,0,0,0.08);
+    --bar-bg: rgba(245, 245, 245, 0.85); 
+    --bar-text: #1a1a1a;
+    --ripple: rgba(0,0,0,0.1);
+  }
+
+  /* Dark Mode Override (applied via data-theme="dark") */
+  :root[data-theme="dark"] {
+    --bg: #000000; 
+    --card: rgba(30, 30, 30, 0.9);
+    --text: #f5f5f7;
+    --muted: #a1a1a6;
+    --accent: #70b5ff; 
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --shadow: 0 8px 30px rgba(0,0,0,0.5);
+    --bar-bg: rgba(30, 30, 35, 0.85);
+    --bar-text: #e3e3e3;
+    --ripple: rgba(255,255,255,0.1);
+  }
+
+  html,body{
+    height:100%; margin:0; font-family:'SF Pro Display', 'Inter', sans-serif; 
+    color:var(--text); background:var(--bg); overflow:hidden;
+    transition: background 0.5s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ----------------------
+     Background Container
+  ---------------------- */
+  .globe-container{
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1;
+    background: transparent; 
+    overflow: hidden; 
+  }
+  
+  .globe-container iframe {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100vw;
+    height: 100dvh; 
+    transform: translate(-50%, -50%) scale(1.3); 
+    border: none;
+    pointer-events: none; 
+  }
+
+  /* ----------------------
+     UI Header (M3 Style)
+  ---------------------- */
+  .ui-header {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    width: 94%; max-width: 600px;
+    z-index: 1000;
+    display: flex; flex-direction: column; align-items: flex-end;
+  }
+
+  /* Material 3 Search Bar */
+  .floating-search-bar {
+    width: 100%;
+    height: 56px; 
+    background: var(--bar-bg);
+    backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+    border: 1px solid var(--glass-border);
+    border-radius: 28px; 
+    box-shadow: var(--shadow);
+    display: flex; align-items: center; 
+    padding: 0 16px;
+    transition: all 0.3s cubic-bezier(0.2, 0.0, 0, 1.0);
+  }
+  
+  .search-leading-icon {
+    color: var(--muted);
+    margin-right: 12px;
+    display: flex; align-items: center;
+  }
+
+  .floating-search-bar input {
+    flex: 1; border: none; background: transparent;
+    font-size: 16px; color: var(--bar-text); outline: none;
+    font-weight: 400;
+  }
+  .floating-search-bar input::placeholder { color: var(--muted); opacity: 0.7; }
+
+  .bar-actions { display: flex; align-items: center; gap: 4px; }
+
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: transparent; border: none; color: var(--bar-text); 
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .icon-btn:active { background: var(--ripple); }
+
+  /* ----------------------
+     Theme Menu Dropdown
+  ---------------------- */
+  #themeMenu {
+    position: absolute;
+    top: 65px; right: 0;
+    width: 200px;
+    background: var(--card);
+    backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    display: none; flex-direction: column; gap: 4px;
+    transform-origin: top right;
+    animation: menuPop 0.2s cubic-bezier(0.2, 0.0, 0, 1.0);
+  }
+  
+  @keyframes menuPop {
+    from { opacity: 0; transform: scale(0.9) translateY(-10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .menu-item {
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: transparent; border: none;
+    color: var(--text); text-align: left; font-size: 15px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .menu-item:hover { background: var(--ripple); }
+  .menu-item.active { background: var(--accent); color: #fff; }
+
+  /* ----------------------
+     Explore Panel
+  ---------------------- */
+  #explorePanel{
+    position: fixed; bottom: 0; left: 0; right: 0;
+    /* FIXED: Lowered max-height so it doesn't overlap the search bar */
+    max-height: calc(100dvh - 90px); 
+    background: var(--card);
+    backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+    border-top: 1px solid var(--glass-border);
+    border-radius: 28px 28px 0 0; 
+    box-shadow: var(--shadow);
+    z-index: 900;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.2, 0.0, 0, 1.0); 
+    display: flex; flex-direction: column;
+  }
+
+  #explorePanel.active { transform: translateY(0); }
+
+  .panel-handle {
+    width: 32px; height: 4px; background: var(--muted); opacity: 0.4;
+    border-radius: 10px; margin: 16px auto 8px;
+  }
+
+  .panel-content { 
+    overflow-y: auto; padding: 0 20px 30px 20px; 
+    /* Smooth scrolling for panel content */
+    -webkit-overflow-scrolling: touch; 
+  }
+
+  @media (min-width: 768px) {
+    #explorePanel{
+      bottom: auto; top: 100px; right: 30px; left: auto;
+      width: 400px; max-height: calc(100vh - 130px);
+      border-radius: 24px; border: 1px solid var(--glass-border);
+      transform: translateX(120%);
+    }
+    #explorePanel.active { transform: translateX(0); }
+    .panel-handle { display: none; }
+    .panel-content { padding: 25px; }
+  }
+
+  /* List & Details Styles */
+  .country-item {
+    display: flex; align-items: center; gap: 15px; padding: 14px;
+    border-radius: 16px; transition: background 0.2s; cursor: pointer;
+    border-bottom: 1px solid rgba(0,0,0,0.03);
+  }
+  .country-item:hover { background: var(--ripple); }
+  .country-item img { width: 48px; height: 32px; border-radius: 6px; object-fit: cover; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  
+  .details-card { 
+    background: var(--ripple); padding: 20px; 
+    border-radius: 20px; display: flex; flex-direction: column; gap: 10px;
+  }
+.detail-row { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: flex-start; /* Aligns text to top */
+    gap: 15px; /* Adds space so text doesn't touch */
+    padding: 12px 0; 
+    font-size: 0.95rem; 
+    border-bottom: 1px solid rgba(128,128,128,0.1); 
+    line-height: 1.4;
+  }
+  
+  .detail-row span:first-child { 
+    color: var(--muted); 
+    flex-shrink: 0; /* Keeps the label fixed width */
+    max-width: 45%; 
+  }
+  
+  .detail-row span:last-child { 
+    text-align: right; 
+    word-break: break-word; /* Forces long text to wrap to next line */
+  }
+  
+  .detail-flag-large { width: 100%; height: 200px; object-fit: cover; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+  .coa-img { height: 40px; width: auto; max-width: 60px; object-fit: contain; }
+
+  .btn-map {
+    display: block; width: 100%; padding: 14px; margin-top: 10px;
+    background: var(--accent); color: white; text-align: center;
+    border-radius: 28px; text-decoration: none; font-weight: 600;
+    transition: transform 0.2s;
+  }
+  .btn-map:hover { transform: scale(1.02); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="globe-container">
+    <iframe src="https://streamable.com/e/jqv1ll?autoplay=1&muted=1&nocontrols=1" allow="fullscreen;autoplay" allowfullscreen></iframe>
+  </div>
+
+  <div class="ui-header">
+    <div class="floating-search-bar">
+      <!-- M3: Search Icon on Left -->
+      <div class="search-leading-icon">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      
+      <input type="text" id="countrySearch" placeholder="Search country..." autocomplete="off" />
+      
+      <div class="bar-actions">
+        <button id="searchBtn" class="icon-btn" style="display:none;">
+           <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+
+        <!-- Menu Button (Hamburger) -->
+        <button id="menuBtn" class="icon-btn">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Theme Dropdown -->
+    <div id="themeMenu">
+      <button class="menu-item" onclick="setThemeMode('light')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Light
+      </button>
+      <button class="menu-item" onclick="setThemeMode('dark')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Dark
+      </button>
+      <button class="menu-item" onclick="setThemeMode('system')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        System
+      </button>
+    </div>
+  </div>
+
+  <div id="explorePanel">
+    <div class="panel-handle"></div>
+    <div class="panel-content">
+      <h2 id="panelTitle" style="margin:10px 0 20px;">Search Results</h2>
+      <div class="details-card" id="countryDetailsCard" style="display:none;"></div>
+      <div id="resultsContainer"><div class="country-list" id="countryList"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------------------------
+  1. CONFIG & STATE
+----------------------------------- */
+const API_FIELDS = 'name,capital,region,subregion,population,area,flags,currencies,cca2,cca3,ccn3,cioc,timezones,latlng,maps,borders,languages,coatOfArms,altSpellings,tld,independent,status,unMember,car,demonyms,gini,fifa,startOfWeek,continents';
+const API_BASE = 'https://restcountries.com/v3.1';
+let countries = []; 
+let debounceTimer = null; 
+
+/* ---------------------------------
+  2. UI & HISTORY NAVIGATION
+----------------------------------- */
+const panel = document.getElementById('explorePanel');
+const searchInput = document.getElementById('countrySearch');
+const menuBtn = document.getElementById('menuBtn');
+const themeMenu = document.getElementById('themeMenu');
+
+// -- Menu Toggle --
+menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    themeMenu.style.display = themeMenu.style.display === 'flex' ? 'none' : 'flex';
+});
+
+document.addEventListener('click', (e) => {
+    if(!themeMenu.contains(e.target) && e.target !== menuBtn) {
+        themeMenu.style.display = 'none';
+    }
+});
+
+// -- Panel Logic with History API --
+function showPanel(title, listOnly = true) {
+    document.getElementById('panelTitle').innerText = title;
+    panel.classList.add('active');
+    document.getElementById('countryDetailsCard').style.display = listOnly ? 'none' : 'flex';
+    document.getElementById('resultsContainer').style.display = listOnly ? 'block' : 'none';
+
+    // Clear any manual transform from swipes
+    panel.style.transform = ''; 
+
+    if (!listOnly) {
+        if (!history.state || history.state.view !== 'details') {
+            history.pushState({ view: 'details', title: title }, title, '');
+        }
+    }
+}
+
+function hidePanel(isPop = false) { 
+    if(panel.classList.contains('active')) {
+        panel.classList.remove('active');
+        panel.style.transform = ''; // Clear swipe transforms
+        if (!isPop && history.state && history.state.view === 'details') {
+            history.back();
+        }
+    }
+}
+
+window.addEventListener('popstate', (event) => {
+    if (panel.classList.contains('active')) {
+        hidePanel(true);
+    }
+});
+
+// -- SWIPE DOWN TO CLOSE LOGIC (NEW) --
+let touchStartY = 0;
+const panelContent = document.querySelector('.panel-content');
+
+panel.addEventListener('touchstart', (e) => {
+    // Only drag if scrolled to top or touching the handle
+    if (panelContent.scrollTop <= 0) {
+        touchStartY = e.touches[0].clientY;
+        panel.style.transition = 'none'; // Instant follow
+    }
+}, {passive: true});
+
+panel.addEventListener('touchmove', (e) => {
+    if (touchStartY === 0 || !panel.classList.contains('active')) return;
+    
+    const touchY = e.touches[0].clientY;
+    const deltaY = touchY - touchStartY;
+
+    if (deltaY > 0) { // Dragging down
+        if(e.cancelable && panelContent.scrollTop <= 0) e.preventDefault(); // Stop page scroll
+        panel.style.transform = `translateY(${deltaY}px)`;
+    }
+}, {passive: false});
+
+panel.addEventListener('touchend', (e) => {
+    if (touchStartY === 0 || !panel.classList.contains('active')) return;
+    
+    const touchY = e.changedTouches[0].clientY;
+    const deltaY = touchY - touchStartY;
+    
+    // Restore transition for smooth snap/close
+    panel.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.0, 0, 1.0)';
+    
+    if (deltaY > 100) { // Dragged enough to close
+        hidePanel(false); // Close it
+    } else {
+        panel.style.transform = ''; // Snap back to top (managed by CSS class)
+    }
+    touchStartY = 0;
+});
+
+
+// UI Close Triggers
+document.querySelector('.panel-handle').addEventListener('click', () => hidePanel(false));
+document.addEventListener('click', (e) => {
+    if(window.innerWidth >= 768 && !panel.contains(e.target) && !document.querySelector('.ui-header').contains(e.target) && panel.classList.contains('active')){
+        hidePanel(false);
+    }
+});
+
+/* ---------------------------------
+  3. THEME LOGIC
+----------------------------------- */
+const systemQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+function setThemeMode(mode) {
+    localStorage.setItem('urath-theme', mode);
+    document.querySelectorAll('.menu-item').forEach(btn => btn.classList.remove('active'));
+    
+    if (mode === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.querySelectorAll('.menu-item')[1].classList.add('active');
+    } else if (mode === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        document.querySelectorAll('.menu-item')[0].classList.add('active');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        document.querySelectorAll('.menu-item')[2].classList.add('active');
+        applySystemTheme(); 
+    }
+    themeMenu.style.display = 'none';
+}
+
+function applySystemTheme() {
+    if(localStorage.getItem('urath-theme') === 'system' || !localStorage.getItem('urath-theme')){
+        if (systemQuery.matches) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+    }
+}
+
+systemQuery.addEventListener('change', () => {
+    if (localStorage.getItem('urath-theme') === 'system') applySystemTheme();
+});
+
+const savedTheme = localStorage.getItem('urath-theme') || 'system';
+setThemeMode(savedTheme);
+
+
+/* ---------------------------------
+  4. COUNTRY DATA LOGIC
+----------------------------------- */
+async function loadCountries(){
+    try{
+        const res = await fetch(`${API_BASE}/all?fields=${API_FIELDS}`);
+        if(res.ok) {
+            const data = await res.json();
+            countries = data.filter(c=>c.name.common).sort((a,b)=>a.name.common.localeCompare(b.name.common));
+            renderResults(countries.slice(0, 10), 'Suggested for you');
+        }
+    }catch(e){ console.error(e); }
+}
+
+function renderResults(list, title){
+    const wrap = document.getElementById('countryList');
+    wrap.innerHTML = '';
+    document.getElementById('panelTitle').innerText = title;
+    if(!list || list.length === 0) { 
+        wrap.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px;">No results found locally.<br><small>Try waiting or check spelling.</small></p>'; 
+        return; 
+    }
+    list.slice(0,50).forEach(c => {
+        const d = document.createElement('div');
+        d.className = 'country-item';
+        d.innerHTML = `
+            <img src="${c.flags.png}" alt="flag">
+            <div>
+                <div style="font-weight:600">${c.name.common}</div>
+                <div style="font-size:0.85rem;color:var(--muted)">${c.region}</div>
+            </div>`;
+        d.onclick = () => showCountryDetails(c);
+        wrap.appendChild(d);
+    });
+}
+
+function getNeighborNames(borders) {
+    if (!borders || borders.length === 0) return "None";
+    if (countries.length === 0) return borders.join(', ');
+    return borders.map(code => {
+        const country = countries.find(c => c.cca3 === code);
+        return country ? country.name.common : code;
+    }).join(', ');
+}
+
+function getWeatherDesc(code) {
+    const codes = {
+        0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+        45: 'Fog', 48: 'Depositing rime fog',
+        51: 'Light drizzle', 53: 'Moderate drizzle', 55: 'Dense drizzle',
+        61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',
+        80: 'Slight showers', 81: 'Moderate showers', 82: 'Violent showers',
+        95: 'Thunderstorm'
+    };
+    return codes[code] || 'Variable';
+}
+
+async function fetchRealTimeData(lat, lng) {
+    const timeSpan = document.getElementById('dyn-time');
+    const weatherSpan = document.getElementById('dyn-weather');
+    
+    if(!lat || !lng) {
+        timeSpan.innerText = "Unavailable";
+        weatherSpan.innerText = "Unavailable";
+        return;
+    }
+    try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&timezone=auto`);
+        if(res.ok){
+            const data = await res.json();
+            if(data.timezone) {
+                 const actualTime = new Date().toLocaleTimeString([], {
+                    timeZone: data.timezone,
+                    hour: '2-digit', minute: '2-digit'
+                 });
+                 timeSpan.innerText = actualTime;
+            } else {
+                 timeSpan.innerText = new Date(data.current_weather.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+            const temp = data.current_weather.temperature;
+            const desc = getWeatherDesc(data.current_weather.weathercode);
+            weatherSpan.innerText = `${temp}°C, ${desc}`;
+        } else { throw new Error("Weather API Error"); }
+    } catch(e) {
+        timeSpan.innerText = "N/A";
+        weatherSpan.innerText = "N/A";
+    }
+}
+
+async function fetchGDPData(countryCode) {
+    const gdpSpan = document.getElementById('dyn-gdp');
+    if (!countryCode) {
+        gdpSpan.innerText = "N/A (Code Missing)";
+        return;
+    }
+    gdpSpan.innerText = "Loading...";
+    const url = `https://api.worldbank.org/v2/country/${countryCode}/indicator/NY.GDP.MKTP.CD?format=json&mrv=1`;
+    try {
+        const res = await fetch(url);
+        if (!res.ok) { gdpSpan.innerText = `N/A (Server error: ${res.status})`; return; }
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length < 2 || !Array.isArray(data[1]) || data[1].length === 0 || data[1][0]?.value === null) {
+            gdpSpan.innerText = "N/A (Data not found)";
+            return;
+        }
+        const latestData = data[1][0];
+        const gdpValue = latestData.value;
+        const gdpYear = latestData.date;
+        let formattedGDP;
+        let suffix = '';
+        const absGDP = Math.abs(gdpValue);
+        if (absGDP >= 1e12) { formattedGDP = (gdpValue / 1e12).toFixed(2); suffix = ' Trillion'; } 
+        else if (absGDP >= 1e9) { formattedGDP = (gdpValue / 1e9).toFixed(2); suffix = ' Billion'; } 
+        else if (absGDP >= 1e6) { formattedGDP = (gdpValue / 1e6).toFixed(2); suffix = ' Million'; } 
+        else { formattedGDP = gdpValue.toLocaleString(); }
+        gdpSpan.innerText = `US$ ${formattedGDP}${suffix} (${gdpYear})`;
+    } catch (e) {
+        console.error("GDP Fetch Error:", e);
+        gdpSpan.innerText = "N/A (API Error)"; 
+    }
+}
+
+function showCountryDetails(c){
+    const card = document.getElementById('countryDetailsCard');
+    const population = c.population ? c.population.toLocaleString() : 'N/A';
+    const area = c.area ? c.area.toLocaleString() + ' km²' : 'N/A';
+    const currencies = c.currencies ? Object.values(c.currencies).map(x => `${x.name} (${x.symbol || '?'})`).join(', ') : 'N/A';
+    const languages = c.languages ? Object.values(c.languages).join(', ') : 'N/A';
+    const neighbors = getNeighborNames(c.borders);
+    const coaUrl = c.coatOfArms?.svg || c.coatOfArms?.png || '';
+    const nativeName = Object.values(c.name.nativeName || {})[0]?.common || 'N/A';
+    const statusText = `${c.independent ? 'Independent' : 'Dependent'} (${c.status})`;
+    const isoCodes = `${c.cca2}, ${c.cca3}, ${c.ccn3 || 'N/A'} (CIOC: ${c.cioc || 'N/A'})`;
+    const tld = (c.tld||[]).join(', ') || 'N/A';
+    const drivingSide = c.car?.side ? c.car.side.charAt(0).toUpperCase() + c.car.side.slice(1) : 'N/A';
+    const carSign = (c.car?.signs||[]).join(', ') || 'N/A';
+    const demonyms = `${c.demonyms?.eng?.m || 'N/A'} / ${c.demonyms?.eng?.f || 'N/A'}`;
+    const gini = Object.values(c.gini || {})[0] ? `${Object.values(c.gini)[0]} (${Object.keys(c.gini)[0]})` : 'N/A';
+    const unMember = c.unMember ? 'Yes' : 'No';
+    const startOfWeek = c.startOfWeek ? c.startOfWeek.charAt(0).toUpperCase() + c.startOfWeek.slice(1) : 'N/A';
+    const fifa = c.fifa || 'N/A';
+    const continents = (c.continents||[]).join(', ') || 'N/A';
+    
+    card.innerHTML = `
+        <h2 style="margin:0">${c.name.common} <small style="color:var(--muted)">${c.cca3}</small></h2>
+        <img src="${c.flags.png}" class="detail-flag-large" alt="Flag of ${c.name.common}">
+        <div class="detail-row"><span>Coat of Arms</span> <span>${coaUrl ? `<img src="${coaUrl}" class="coa-img">` : 'N/A'}</span></div>
+        <div class="detail-row"><span>Official Name</span> <span>${c.name.official}</span></div>
+        <div class="detail-row"><span>Native Name</span> <span>${nativeName}</span></div>
+        <div class="detail-row"><span>Capital</span> <span>${c.capital?.[0]||'N/A'}</span></div>
+        <div class="detail-row"><span>Region / Continent</span> <span>${c.region} / ${continents}</span></div>
+        <div class="detail-row"><span>Subregion</span> <span>${c.subregion || 'N/A'}</span></div>
+        <div class="detail-row"><span>Population</span> <span>${population}</span></div>
+        <div class="detail-row"><span>Area</span> <span>${area}</span></div>
+        <div class="detail-row"><span>GDP (Current US$)</span> <span id="dyn-gdp" style="color:var(--accent)">Loading...</span></div>
+        <div class="detail-row"><span>Languages</span> <span>${languages}</span></div>
+        <div class="detail-row"><span>Currency</span> <span>${currencies}</span></div>
+        <div class="detail-row"><span>TLD</span> <span>${tld}</span></div>
+        <div class="detail-row"><span>ISO Codes</span> <span>${isoCodes}</span></div>
+        <div class="detail-row"><span>UN Member</span> <span>${unMember}</span></div>
+        <div class="detail-row"><span>Status</span> <span>${statusText}</span></div>
+        <div class="detail-row"><span>Demonyms</span> <span>${demonyms}</span></div>
+        <div class="detail-row"><span>FIFA Code</span> <span>${fifa}</span></div>
+        <div class="detail-row"><span>Gini Index</span> <span>${gini}</span></div>
+        <div class="detail-row"><span>Driving Side</span> <span>${drivingSide} (Sign: ${carSign})</span></div>
+        <div class="detail-row"><span>Week Start</span> <span>${startOfWeek}</span></div>
+        <div class="detail-row"><span>Neighbours</span> <span>${neighbors}</span></div>
+        <div class="detail-row"><span>Timezones</span> <span>${(c.timezones||[]).slice(0,3).join(', ')}${c.timezones?.length>3?'...':''}</span></div>
+        <div class="detail-row"><span>Local Time</span> <span id="dyn-time" style="color:var(--accent)">Loading...</span></div>
+        <div class="detail-row"><span>Weather</span> <span id="dyn-weather" style="color:var(--accent)">Loading...</span></div>
+        <a href="${c.maps.googleMaps}" target="_blank" rel="noopener noreferrer" class="btn-map">Open in Google Maps</a>
+    `;
+    
+    if(c.latlng) { fetchRealTimeData(c.latlng[0], c.latlng[1]); }
+    fetchGDPData(c.cca2); 
+    showPanel(c.name.common, false);
+}
+
+document.getElementById('searchBtn').addEventListener('click', () => handleSearch(false));
+searchInput.addEventListener('keydown', (e) => { if(e.key==='Enter') handleSearch(false); });
+searchInput.addEventListener('input', () => handleSearch(true));
+
+async function fetchFromAPI(q) {
+    try {
+        document.getElementById('panelTitle').innerText = "Searching remote database...";
+        const res = await fetch(`${API_BASE}/name/${encodeURIComponent(q)}`);
+        if (res.ok) {
+            const data = await res.json();
+            showPanel(`Results for "${q}"`, true);
+            renderResults(data, `Results for "${q}"`);
+            if(data.length === 1) showCountryDetails(data[0]);
+        } else {
+            renderResults([], `No results for "${q}"`); 
+        }
+    } catch (err) { renderResults([], `Network Error`); }
+}
+
+async function handleSearch(isTyping = false){
+    const q = searchInput.value.trim().toLowerCase();
+    if(debounceTimer) clearTimeout(debounceTimer);
+    if(!q) { 
+        showPanel('Suggested for you', true); 
+        renderResults(countries.slice(0,10), 'Suggested for you'); 
+        return; 
+    }
+    let filtered = [];
+    if (countries.length > 0) {
+        filtered = countries.filter(c => {
+            const common = c.name.common.toLowerCase();
+            const official = c.name.official.toLowerCase();
+            const code = c.cca3 ? c.cca3.toLowerCase() : '';
+            const alt = c.altSpellings ? c.altSpellings.map(s => s.toLowerCase()) : [];
+            return common.includes(q) || official.includes(q) || code.includes(q) || alt.some(s => s.includes(q));
+        });
+    }
+    if (filtered.length > 0) {
+        if(!isTyping && filtered.length === 1) {
+             showCountryDetails(filtered[0]);
+        } else {
+             showPanel(`Results for "${q}"`, true); 
+             renderResults(filtered, `Results for "${q}"`);
+        }
+        return;
+    }
+    if(isTyping) {
+         renderResults([], "Searching..."); 
+         debounceTimer = setTimeout(() => { fetchFromAPI(q); }, 500); 
+         return;
+    }
+    showPanel('Searching...', true);
+    fetchFromAPI(q);
+}
+
+window.onload = () => { loadCountries(); };
+</script>
+</body>
+</html>
